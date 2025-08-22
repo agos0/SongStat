@@ -19,20 +19,46 @@ import DataVisualization from "@/components/spotify/DataVisualization";
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState("history");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // Check if user is authenticated on component mount
   useEffect(() => {
-    // In a real implementation, this would check for valid tokens in localStorage or cookies
-    const token = localStorage.getItem("spotify_access_token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
+    const checkAuthStatus = async () => {
+      const storedToken = localStorage.getItem("spotify_access_token");
+      if (storedToken) {
+        // Verify the token is still valid by making a test request
+        try {
+          const response = await fetch('https://api.spotify.com/v1/me', {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`,
+            },
+          });
+          
+          if (response.ok) {
+            setIsAuthenticated(true);
+            setAccessToken(storedToken);
+          } else {
+            // Token is invalid, remove it
+            localStorage.removeItem("spotify_access_token");
+            localStorage.removeItem("spotify_refresh_token");
+          }
+        } catch (error) {
+          console.error('Error checking auth status:', error);
+          // Remove invalid tokens
+          localStorage.removeItem("spotify_access_token");
+          localStorage.removeItem("spotify_refresh_token");
+        }
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("spotify_access_token");
     localStorage.removeItem("spotify_refresh_token");
     setIsAuthenticated(false);
+    setAccessToken(null);
   };
 
   return (
@@ -66,7 +92,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
-                <SpotifyAuth onAuthenticated={() => setIsAuthenticated(true)} />
+                <SpotifyAuth onAuthSuccess={() => setIsAuthenticated(true)} />
               </CardContent>
             </Card>
           </div>
@@ -100,15 +126,15 @@ export default function Home() {
             </div>
 
             <TabsContent value="history" className="w-full">
-              <ListeningHistory />
+              <ListeningHistory accessToken={accessToken} />
             </TabsContent>
 
             <TabsContent value="recommendations" className="w-full">
-              <Recommendations />
+              <Recommendations accessToken={accessToken} />
             </TabsContent>
 
             <TabsContent value="stats" className="w-full">
-              <DataVisualization />
+              <DataVisualization accessToken={accessToken} />
             </TabsContent>
           </Tabs>
         )}

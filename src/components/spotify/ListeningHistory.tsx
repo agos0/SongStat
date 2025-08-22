@@ -17,7 +17,7 @@ interface Track {
   duration: string;
 }
 
-const ListeningHistory = ({ accessToken = null }) => {
+const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
   const [timeRange, setTimeRange] = useState<
     "short_term" | "medium_term" | "long_term"
   >("short_term");
@@ -89,16 +89,67 @@ const ListeningHistory = ({ accessToken = null }) => {
   ];
 
   useEffect(() => {
-    // In a real implementation, this would fetch data from Spotify API
-    // using the accessToken and timeRange
     const fetchTracks = async () => {
       setLoading(true);
       try {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setTracks(mockTracks);
+        const accessToken = localStorage.getItem('spotify_access_token');
+        
+        if (!accessToken) {
+          setTracks(mockTracks);
+          return;
+        }
+
+        let endpoint;
+        if (timeRange === "short_term") {
+          // Get recently played tracks
+          endpoint = 'https://api.spotify.com/v1/me/player/recently-played?limit=20';
+        } else {
+          // Get top tracks for medium/long term
+          endpoint = `https://api.spotify.com/v1/me/top/tracks?time_range=${timeRange}&limit=20`;
+        }
+
+        const response = await fetch(endpoint, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch tracks');
+        }
+
+        const data = await response.json();
+        
+        let tracksData;
+        if (timeRange === "short_term") {
+          // Recently played tracks
+          tracksData = data.items.map((item: any) => ({
+            id: item.track.id,
+            name: item.track.name,
+            artist: item.track.artists.map((a: any) => a.name).join(', '),
+            album: item.track.album.name,
+            albumArt: item.track.album.images[0]?.url || '',
+            playedAt: item.played_at,
+            duration: formatDuration(item.track.duration_ms)
+          }));
+        } else {
+          // Top tracks
+          tracksData = data.items.map((track: any) => ({
+            id: track.id,
+            name: track.name,
+            artist: track.artists.map((a: any) => a.name).join(', '),
+            album: track.album.name,
+            albumArt: track.album.images[0]?.url || '',
+            playedAt: new Date().toISOString(), // Top tracks don't have played_at
+            duration: formatDuration(track.duration_ms)
+          }));
+        }
+
+        setTracks(tracksData);
       } catch (error) {
         console.error("Error fetching tracks:", error);
+        // Fallback to mock data on error
+        setTracks(mockTracks);
       } finally {
         setLoading(false);
       }
@@ -106,6 +157,12 @@ const ListeningHistory = ({ accessToken = null }) => {
 
     fetchTracks();
   }, [timeRange]);
+
+  const formatDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

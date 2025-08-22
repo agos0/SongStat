@@ -23,33 +23,29 @@ const SpotifyAuth = ({ onAuthSuccess = () => {} }: SpotifyAuthProps) => {
     setIsLoading(true);
 
     try {
-      // In a real implementation, this would redirect to Spotify OAuth flow
-      // For now, we're just simulating the auth flow with a timeout
-
-      // Spotify auth would typically look like:
-      // 1. Redirect to Spotify authorization URL with client ID, redirect URI, and scopes
-      // 2. Spotify redirects back to your app with an authorization code
-      // 3. Your backend exchanges the code for access and refresh tokens
-
-      const clientId =
-        process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "your-client-id";
-      const redirectUri = encodeURIComponent(
-        window.location.origin + "/callback",
-      );
-      const scopes = encodeURIComponent(
-        "user-read-private user-read-email user-read-recently-played user-top-read playlist-modify-public playlist-modify-private",
-      );
-
-      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}`;
-
-      // In a real implementation, we would redirect to authUrl
-      // window.location.href = authUrl;
-
-      // For demo purposes, simulate successful auth after a delay
-      setTimeout(() => {
+      // Real Spotify OAuth implementation
+      const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+      
+      if (!clientId || clientId === "your-client-id") {
+        alert("Please set NEXT_PUBLIC_SPOTIFY_CLIENT_ID environment variable");
         setIsLoading(false);
-        onAuthSuccess();
-      }, 2000);
+        return;
+      }
+
+      // Use 127.0.0.1 instead of localhost for Spotify OAuth
+      const redirectUri = window.location.hostname === 'localhost' 
+        ? 'http://127.0.0.1:3000/callback'
+        : window.location.origin + "/callback";
+      const scopes = "user-read-private user-read-email user-read-recently-played user-top-read playlist-modify-public playlist-modify-private user-read-playback-state user-read-currently-playing";
+
+      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
+
+      console.log("Redirecting to:", authUrl);
+      console.log("Client ID:", clientId);
+      console.log("Redirect URI:", redirectUri);
+
+      // Redirect to Spotify authorization URL
+      window.location.href = authUrl;
     } catch (error) {
       console.error("Authentication error:", error);
       setIsLoading(false);

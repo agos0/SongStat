@@ -24,10 +24,10 @@ interface TimeData {
 }
 
 interface DataVisualizationProps {
-  userId?: string;
+  accessToken?: string | null;
 }
 
-const DataVisualization = ({ userId = "user123" }: DataVisualizationProps) => {
+const DataVisualization = ({ accessToken }: DataVisualizationProps) => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("genres");
   const [genreData, setGenreData] = useState<GenreData[]>([]);
@@ -48,13 +48,61 @@ const DataVisualization = ({ userId = "user123" }: DataVisualizationProps) => {
   ];
 
   useEffect(() => {
-    // Simulate API call to fetch data
     const fetchData = async () => {
       setLoading(true);
 
-      // In a real app, this would be an API call to fetch user's listening data
-      setTimeout(() => {
-        // Mock genre data
+      try {
+        if (!accessToken) {
+          // Fallback to mock data if no access token
+          const mockGenreData: GenreData[] = [
+            { name: "Pop", count: 145, color: chartColors[0] },
+            { name: "Rock", count: 98, color: chartColors[1] },
+            { name: "Hip Hop", count: 87, color: chartColors[2] },
+            { name: "Electronic", count: 76, color: chartColors[3] },
+            { name: "R&B", count: 65, color: chartColors[4] },
+            { name: "Indie", count: 54, color: chartColors[5] },
+            { name: "Jazz", count: 32, color: chartColors[6] },
+            { name: "Classical", count: 21, color: chartColors[7] },
+          ];
+
+          const mockTimeData: TimeData[] = [
+            { day: "Monday", count: 42 },
+            { day: "Tuesday", count: 38 },
+            { day: "Wednesday", count: 45 },
+            { day: "Thursday", count: 39 },
+            { day: "Friday", count: 68 },
+            { day: "Saturday", count: 82 },
+            { day: "Sunday", count: 74 },
+          ];
+
+          setGenreData(mockGenreData);
+          setTimeData(mockTimeData);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch real data from our API
+        const response = await fetch(`/api/spotify/user-data?accessToken=${accessToken}&timeRange=short_term`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const data = await response.json();
+
+        // Process genre data with colors
+        const processedGenreData: GenreData[] = data.genreData.map((genre: any, index: number) => ({
+          name: genre.name.charAt(0).toUpperCase() + genre.name.slice(1),
+          count: genre.count,
+          color: chartColors[index % chartColors.length],
+        }));
+
+        setGenreData(processedGenreData);
+        setTimeData(data.timeData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        // Fallback to mock data on error
         const mockGenreData: GenreData[] = [
           { name: "Pop", count: 145, color: chartColors[0] },
           { name: "Rock", count: 98, color: chartColors[1] },
@@ -66,7 +114,6 @@ const DataVisualization = ({ userId = "user123" }: DataVisualizationProps) => {
           { name: "Classical", count: 21, color: chartColors[7] },
         ];
 
-        // Mock time data (listening by day of week)
         const mockTimeData: TimeData[] = [
           { day: "Monday", count: 42 },
           { day: "Tuesday", count: 38 },
@@ -80,11 +127,11 @@ const DataVisualization = ({ userId = "user123" }: DataVisualizationProps) => {
         setGenreData(mockGenreData);
         setTimeData(mockTimeData);
         setLoading(false);
-      }, 1500);
+      }
     };
 
     fetchData();
-  }, [userId]);
+  }, [accessToken]);
 
   // Calculate the maximum count for scaling the bar chart
   const maxTimeCount = Math.max(...timeData.map((item) => item.count));

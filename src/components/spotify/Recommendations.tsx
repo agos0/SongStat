@@ -33,7 +33,7 @@ interface Track {
 }
 
 interface RecommendationsProps {
-  accessToken?: string;
+  accessToken?: string | null;
 }
 
 const genres = [
@@ -60,7 +60,7 @@ const genres = [
 ];
 
 export default function Recommendations({
-  accessToken = "",
+  accessToken,
 }: RecommendationsProps) {
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
@@ -128,25 +128,60 @@ export default function Recommendations({
   ];
 
   useEffect(() => {
-    // In a real implementation, this would fetch from Spotify API
-    // For now, just use mock data
-    setRecommendations(mockRecommendations);
-  }, []);
+    if (accessToken) {
+      fetchRecommendations();
+    } else {
+      // Fallback to mock data if no access token
+      setRecommendations(mockRecommendations);
+    }
+  }, [accessToken]);
 
   const fetchRecommendations = async (genre?: string) => {
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Filter by genre if provided
-      const filteredRecommendations =
-        genre && genre !== "all"
-          ? mockRecommendations.slice(0, 4) // Simulate filtered results
-          : mockRecommendations;
+    try {
+      if (!accessToken) {
+        // Fallback to mock data
+        const filteredRecommendations =
+          genre && genre !== "all"
+            ? mockRecommendations.slice(0, 4)
+            : mockRecommendations;
 
-      setRecommendations(filteredRecommendations);
+        setRecommendations(filteredRecommendations);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch real recommendations from our API
+      const params = new URLSearchParams({
+        accessToken: accessToken,
+        limit: '20',
+      });
+
+      if (genre && genre !== 'all') {
+        params.append('genre', genre);
+      }
+
+      const response = await fetch(`/api/spotify/recommendations?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendations');
+      }
+
+      const data = await response.json();
+      setRecommendations(data.recommendations);
       setIsLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      toast({
+        title: "Error fetching recommendations",
+        description: "Using sample data instead. Please try again later.",
+        variant: "destructive",
+      });
+      // Fallback to mock data on error
+      setRecommendations(mockRecommendations);
+      setIsLoading(false);
+    }
   };
 
   const handleGenreChange = (value: string) => {
