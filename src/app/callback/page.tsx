@@ -38,7 +38,8 @@ function CallbackContent() {
         if (!response.ok) {
           const errorData = await response.json();
           console.error('Token exchange failed:', errorData);
-          throw new Error(errorData.error || 'Failed to exchange code for tokens');
+          const errorMessage = errorData.details?.error_description || errorData.error || 'Failed to exchange code for tokens';
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();

@@ -4,6 +4,8 @@ export async function POST(request: NextRequest) {
   try {
     const { code } = await request.json();
 
+    console.log('Token exchange request received with code:', code ? 'PRESENT' : 'MISSING');
+
     if (!code) {
       return NextResponse.json({ error: 'Authorization code is required' }, { status: 400 });
     }
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
     console.log('SPOTIFY_CLIENT_ID:', clientId ? 'SET' : 'NOT SET');
     console.log('SPOTIFY_CLIENT_SECRET:', clientSecret ? 'SET' : 'NOT SET');
     console.log('Redirect URI:', redirectUri);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
 
     if (!clientId || !clientSecret) {
       return NextResponse.json({ 
@@ -32,17 +35,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Exchange authorization code for tokens
+    const requestBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+    });
+    
+    console.log('Sending request to Spotify with:');
+    console.log('Client ID:', clientId);
+    console.log('Redirect URI:', redirectUri);
+    console.log('Request body:', requestBody.toString());
+    
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri,
-      }),
+      body: requestBody,
     });
 
     if (!tokenResponse.ok) {
