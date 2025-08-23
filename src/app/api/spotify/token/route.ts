@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
 
     const clientId = process.env.SPOTIFY_CLIENT_ID || process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    const redirectUri = 'http://127.0.0.1:3000/callback';
+    
+    // Use the same redirect URI logic as the frontend
+    const redirectUri = process.env.NODE_ENV === 'development' 
+      ? 'http://127.0.0.1:3000/callback'
+      : 'https://next-spotify-song-tracker.vercel.app/callback';
 
     console.log('Environment variables check:');
     console.log('SPOTIFY_CLIENT_ID:', clientId ? 'SET' : 'NOT SET');
