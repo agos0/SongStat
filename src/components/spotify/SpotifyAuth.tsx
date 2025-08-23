@@ -35,7 +35,7 @@ const SpotifyAuth = ({ onAuthSuccess = () => {} }: SpotifyAuthProps) => {
       // Use 127.0.0.1 instead of localhost for Spotify OAuth
       const redirectUri = window.location.hostname === 'localhost' 
         ? 'http://127.0.0.1:3000/callback'
-        : 'https://next-spotify-song-tracker-d4lpqf11g-aryan-goswamis-projects.vercel.app/callback';
+        : window.location.origin + '/callback';
       const scopes = "user-read-private user-read-email user-read-recently-played user-top-read playlist-modify-public playlist-modify-private user-read-playback-state user-read-currently-playing";
 
       const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
