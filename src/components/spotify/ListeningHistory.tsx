@@ -40,7 +40,6 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
       playedAt: "2023-06-15T14:00:00Z",
       duration: "3:14",
     },
-    // Add more mock tracks as needed
   ];
 
   const formatDuration = (ms: number) => {
@@ -82,7 +81,7 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
 
         if (timeRange === "short_term") {
           tracksData = data.items.map((item: any) => ({
-            id: item.track.id,
+            id: item.track?.id ?? item.track?.uri ?? Math.random().toString(),
             name: item.track.name,
             artist: item.track.artists.map((a: any) => a.name).join(", "),
             album: item.track.album.name,
@@ -171,7 +170,8 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
                       <div className="col-span-5">TITLE</div>
                       <div className="col-span-3">ALBUM</div>
                       {timeRange === "short_term" && <div className="col-span-2">PLAYED AT</div>}
-                      <div className="col-span-1 flex justify-end">
+                      {/* Duration header (Clock) is always the last column and is col-span-1 */}
+                      <div className="col-span-1 flex justify-end items-center">
                         <Clock className="h-4 w-4" />
                       </div>
                     </div>
@@ -185,6 +185,7 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
                         }`}
                       >
                         <div className="col-span-1 text-muted-foreground">{index + 1}</div>
+
                         <div className="col-span-5 flex items-center gap-3">
                           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
                             <img
@@ -202,17 +203,15 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
                             <div className="text-sm text-muted-foreground">{track.artist}</div>
                           </div>
                         </div>
+
                         <div className="col-span-3 text-sm text-muted-foreground truncate">{track.album}</div>
+
                         {timeRange === "short_term" && (
-                          <div className="col-span-2 text-sm text-muted-foreground">
-                            {formatDate(track.playedAt)}
-                          </div>
+                          <div className="col-span-2 text-sm text-muted-foreground">{formatDate(track.playedAt)}</div>
                         )}
-                        <div
-                          className={`text-sm text-muted-foreground flex justify-end ${
-                            timeRange === "short_term" ? "col-span-1" : "col-span-2"
-                          }`}
-                        >
+
+                        {/* Duration column: last column, always col-span-1 so it aligns with the Clock header */}
+                        <div className="col-span-1 text-sm text-muted-foreground flex justify-end">
                           {track.duration}
                         </div>
                       </div>
