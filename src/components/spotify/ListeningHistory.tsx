@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, Music } from "lucide-react";
 
@@ -18,21 +17,17 @@ interface Track {
 }
 
 const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
-  const [timeRange, setTimeRange] = useState<
-    "short_term" | "medium_term" | "long_term"
-  >("short_term");
+  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("short_term");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Mock data for UI scaffolding
   const mockTracks: Track[] = [
     {
       id: "1",
       name: "Blinding Lights",
       artist: "The Weeknd",
       album: "After Hours",
-      albumArt:
-        "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=300&q=80",
+      albumArt: "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=300&q=80",
       playedAt: "2023-06-15T14:30:00Z",
       duration: "3:20",
     },
@@ -41,114 +36,75 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
       name: "Bad Guy",
       artist: "Billie Eilish",
       album: "When We All Fall Asleep, Where Do We Go?",
-      albumArt:
-        "https://images.unsplash.com/photo-1598387993281-cecf8b71a8f8?w=300&q=80",
+      albumArt: "https://images.unsplash.com/photo-1598387993281-cecf8b71a8f8?w=300&q=80",
       playedAt: "2023-06-15T14:00:00Z",
       duration: "3:14",
     },
-    {
-      id: "3",
-      name: "Levitating",
-      artist: "Dua Lipa",
-      album: "Future Nostalgia",
-      albumArt:
-        "https://images.unsplash.com/photo-1619983081563-430f63602796?w=300&q=80",
-      playedAt: "2023-06-15T13:45:00Z",
-      duration: "3:23",
-    },
-    {
-      id: "4",
-      name: "Stay",
-      artist: "The Kid LAROI, Justin Bieber",
-      album: "F*CK LOVE 3: OVER YOU",
-      albumArt:
-        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&q=80",
-      playedAt: "2023-06-15T13:30:00Z",
-      duration: "2:21",
-    },
-    {
-      id: "5",
-      name: "Montero (Call Me By Your Name)",
-      artist: "Lil Nas X",
-      album: "MONTERO",
-      albumArt:
-        "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&q=80",
-      playedAt: "2023-06-15T13:15:00Z",
-      duration: "2:17",
-    },
-    {
-      id: "6",
-      name: "Save Your Tears",
-      artist: "The Weeknd",
-      album: "After Hours",
-      albumArt:
-        "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=300&q=80",
-      playedAt: "2023-06-15T13:00:00Z",
-      duration: "3:35",
-    },
+    // Add more mock tracks as needed
   ];
+
+  const formatDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
 
   useEffect(() => {
     const fetchTracks = async () => {
       setLoading(true);
       try {
-        const accessToken = localStorage.getItem('spotify_access_token');
-        
-        if (!accessToken) {
+        const token = localStorage.getItem("spotify_access_token") || accessToken;
+
+        if (!token) {
           setTracks(mockTracks);
           return;
         }
 
         let endpoint;
         if (timeRange === "short_term") {
-          // Get recently played tracks
-          endpoint = 'https://api.spotify.com/v1/me/player/recently-played?limit=20';
+          endpoint = "https://api.spotify.com/v1/me/player/recently-played?limit=20";
         } else {
-          // Get top tracks for medium/long term
           endpoint = `https://api.spotify.com/v1/me/top/tracks?time_range=${timeRange}&limit=20`;
         }
 
-        const response = await fetch(endpoint, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
+        const res = await fetch(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        if (!res.ok) throw new Error("Failed to fetch tracks");
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch tracks');
-        }
+        const data = await res.json();
+        let tracksData: Track[] = [];
 
-        const data = await response.json();
-        
-        let tracksData;
         if (timeRange === "short_term") {
-          // Recently played tracks
           tracksData = data.items.map((item: any) => ({
             id: item.track.id,
             name: item.track.name,
-            artist: item.track.artists.map((a: any) => a.name).join(', '),
+            artist: item.track.artists.map((a: any) => a.name).join(", "),
             album: item.track.album.name,
-            albumArt: item.track.album.images[0]?.url || '',
+            albumArt: item.track.album.images[0]?.url || "",
             playedAt: item.played_at,
-            duration: formatDuration(item.track.duration_ms)
+            duration: formatDuration(item.track.duration_ms),
           }));
         } else {
-          // Top tracks
           tracksData = data.items.map((track: any) => ({
             id: track.id,
             name: track.name,
-            artist: track.artists.map((a: any) => a.name).join(', '),
+            artist: track.artists.map((a: any) => a.name).join(", "),
             album: track.album.name,
-            albumArt: track.album.images[0]?.url || '',
-            playedAt: new Date().toISOString(), // Top tracks don't have played_at
-            duration: formatDuration(track.duration_ms)
+            albumArt: track.album.images[0]?.url || "",
+            playedAt: new Date().toISOString(),
+            duration: formatDuration(track.duration_ms),
           }));
         }
 
         setTracks(tracksData);
       } catch (error) {
-        console.error("Error fetching tracks:", error);
-        // Fallback to mock data on error
+        console.error(error);
         setTracks(mockTracks);
       } finally {
         setLoading(false);
@@ -156,18 +112,7 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
     };
 
     fetchTracks();
-  }, [timeRange]);
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
+  }, [timeRange, accessToken]);
 
   const timeRangeLabels = {
     short_term: "Last Week",
@@ -184,31 +129,25 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
         </p>
       </div>
 
-      <Tabs
-        defaultValue="short_term"
-        onValueChange={(value) => setTimeRange(value as any)}
-      >
+      <Tabs defaultValue="short_term" onValueChange={(value) => setTimeRange(value as any)}>
         <TabsList className="mb-6">
-          <TabsTrigger value="short_term">
-            {timeRangeLabels.short_term}
-          </TabsTrigger>
-          <TabsTrigger value="medium_term">
-            {timeRangeLabels.medium_term}
-          </TabsTrigger>
-          <TabsTrigger value="long_term">
-            {timeRangeLabels.long_term}
-          </TabsTrigger>
+          {Object.entries(timeRangeLabels).map(([value, label]) => (
+            <TabsTrigger key={value} value={value}>
+              {label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {Object.entries(timeRangeLabels).map(([value, label]) => (
           <TabsContent key={value} value={value} className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Tracks from {label}</CardTitle>
+                <CardTitle>
+                  {timeRange === "short_term" ? "Listening History" : `Top Tracks from ${label}`}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  // Loading skeletons
                   <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
                       <div key={i} className="flex items-center gap-4">
@@ -222,50 +161,58 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="grid grid-cols-12 text-xs font-medium text-muted-foreground mb-2 px-4">
+                    {/* Header */}
+                    <div
+                      className={`grid text-xs font-medium text-muted-foreground mb-2 px-4 ${
+                        timeRange === "short_term" ? "grid-cols-12" : "grid-cols-10"
+                      }`}
+                    >
                       <div className="col-span-1">#</div>
                       <div className="col-span-5">TITLE</div>
                       <div className="col-span-3">ALBUM</div>
-                      <div className="col-span-2">PLAYED AT</div>
+                      {timeRange === "short_term" && <div className="col-span-2">PLAYED AT</div>}
                       <div className="col-span-1 flex justify-end">
                         <Clock className="h-4 w-4" />
                       </div>
                     </div>
 
+                    {/* Tracks */}
                     {tracks.map((track, index) => (
                       <div
                         key={track.id}
-                        className="grid grid-cols-12 items-center py-2 px-4 rounded-md hover:bg-accent/50 transition-colors"
+                        className={`grid items-center py-2 px-4 rounded-md hover:bg-accent/50 transition-colors ${
+                          timeRange === "short_term" ? "grid-cols-12" : "grid-cols-10"
+                        }`}
                       >
-                        <div className="col-span-1 text-muted-foreground">
-                          {index + 1}
-                        </div>
+                        <div className="col-span-1 text-muted-foreground">{index + 1}</div>
                         <div className="col-span-5 flex items-center gap-3">
                           <div className="h-10 w-10 rounded overflow-hidden flex-shrink-0">
                             <img
                               src={track.albumArt}
                               alt={track.album}
                               className="h-full w-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  "https://api.dicebear.com/7.x/avataaars/svg?seed=music";
-                              }}
+                              onError={(e) =>
+                                ((e.target as HTMLImageElement).src =
+                                  "https://api.dicebear.com/7.x/avataaars/svg?seed=music")
+                              }
                             />
                           </div>
                           <div>
                             <div className="font-medium">{track.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {track.artist}
-                            </div>
+                            <div className="text-sm text-muted-foreground">{track.artist}</div>
                           </div>
                         </div>
-                        <div className="col-span-3 text-sm text-muted-foreground truncate">
-                          {track.album}
-                        </div>
-                        <div className="col-span-2 text-sm text-muted-foreground">
-                          {formatDate(track.playedAt)}
-                        </div>
-                        <div className="col-span-1 text-sm text-muted-foreground flex justify-end">
+                        <div className="col-span-3 text-sm text-muted-foreground truncate">{track.album}</div>
+                        {timeRange === "short_term" && (
+                          <div className="col-span-2 text-sm text-muted-foreground">
+                            {formatDate(track.playedAt)}
+                          </div>
+                        )}
+                        <div
+                          className={`text-sm text-muted-foreground flex justify-end ${
+                            timeRange === "short_term" ? "col-span-1" : "col-span-2"
+                          }`}
+                        >
                           {track.duration}
                         </div>
                       </div>
