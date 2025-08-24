@@ -15,6 +15,7 @@ import SpotifyAuth from "@/components/spotify/SpotifyAuth";
 import ListeningHistory from "@/components/spotify/ListeningHistory";
 import Recommendations from "@/components/spotify/Recommendations";
 import DataVisualization from "@/components/spotify/DataVisualization";
+import Image from "next/image";
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -66,7 +67,7 @@ export default function Home() {
       <header className="border-b bg-card">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <MusicIcon className="h-6 w-6 text-primary" />
+            <Image src="/logo.png" alt="SongStat Logo" width={32} height={32} />
             <h1 className="text-xl font-bold">SongStat</h1>
           </div>
 

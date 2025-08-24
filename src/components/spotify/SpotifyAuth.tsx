@@ -67,8 +67,8 @@ const SpotifyAuth = ({ onAuthSuccess = () => {} }: SpotifyAuthProps) => {
 
         <CardContent className="flex justify-center">
           <img
-            src="/spotify-logo.png"
-            alt="Spotify Logo"
+            src="/logo.png"
+            alt="SongStat Logo"
             className="h-24 w-24 mb-4"
             onError={(e) => {
               // Fallback if image doesn't exist
