@@ -67,7 +67,7 @@ export default function Home() {
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <MusicIcon className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Spotify Song Tracker</h1>
+            <h1 className="text-xl font-bold">SongStat</h1>
           </div>
 
           {isAuthenticated && (
@@ -84,7 +84,7 @@ export default function Home() {
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle className="text-center">
-                  Welcome to Spotify Song Tracker
+                  Welcome to SongStat
                 </CardTitle>
                 <CardDescription className="text-center">
                   Connect your Spotify account to view your listening history
@@ -142,7 +142,7 @@ export default function Home() {
 
       <footer className="border-t py-4 px-4 text-center text-sm text-muted-foreground">
         <p>
-          © {new Date().getFullYear()} Spotify Song Tracker. Powered by Spotify
+          © {new Date().getFullYear()} SongStat. Powered by Spotify
           API.
         </p>
       </footer>
