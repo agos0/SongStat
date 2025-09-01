@@ -23,11 +23,7 @@ interface TimeData {
   count: number;
 }
 
-interface DataVisualizationProps {
-  accessToken?: string | null;
-}
-
-const DataVisualization = ({ accessToken }: DataVisualizationProps) => {
+const DataVisualization = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("genres");
   const [genreData, setGenreData] = useState<GenreData[]>([]);
@@ -52,39 +48,17 @@ const DataVisualization = ({ accessToken }: DataVisualizationProps) => {
       setLoading(true);
 
       try {
-        if (!accessToken) {
-          // Fallback to mock data if no access token
-          const mockGenreData: GenreData[] = [
-            { name: "Pop", count: 145, color: chartColors[0] },
-            { name: "Rock", count: 98, color: chartColors[1] },
-            { name: "Hip Hop", count: 87, color: chartColors[2] },
-            { name: "Electronic", count: 76, color: chartColors[3] },
-            { name: "R&B", count: 65, color: chartColors[4] },
-            { name: "Indie", count: 54, color: chartColors[5] },
-            { name: "Jazz", count: 32, color: chartColors[6] },
-            { name: "Classical", count: 21, color: chartColors[7] },
-          ];
-
-          const mockTimeData: TimeData[] = [
-            { day: "Monday", count: 42 },
-            { day: "Tuesday", count: 38 },
-            { day: "Wednesday", count: 45 },
-            { day: "Thursday", count: 39 },
-            { day: "Friday", count: 68 },
-            { day: "Saturday", count: 82 },
-            { day: "Sunday", count: 74 },
-          ];
-
-          setGenreData(mockGenreData);
-          setTimeData(mockTimeData);
-          setLoading(false);
-          return;
-        }
-
         // Fetch real data from our API
-        const response = await fetch(`/api/spotify/user-data?accessToken=${accessToken}&timeRange=short_term`);
+        const response = await fetch('/api/spotify/user-data?timeRange=short_term', {
+          credentials: 'include', // Include cookies for session
+        });
         
         if (!response.ok) {
+          if (response.status === 401) {
+            // Session expired, redirect to login
+            window.location.href = '/';
+            return;
+          }
           throw new Error('Failed to fetch user data');
         }
 
@@ -131,7 +105,7 @@ const DataVisualization = ({ accessToken }: DataVisualizationProps) => {
     };
 
     fetchData();
-  }, [accessToken]);
+  }, []);
 
   // Calculate the maximum count for scaling the bar chart
   const maxTimeCount = Math.max(...timeData.map((item) => item.count));

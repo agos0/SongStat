@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getSession } from '../token/route';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const accessToken = searchParams.get('accessToken');
     const genre = searchParams.get('genre');
     const limit = searchParams.get('limit') || '20';
 
     console.log('Recommendations API called with:', { genre, limit });
 
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Access token is required' }, { status: 400 });
+    // Get session from cookies
+    const cookieStore = cookies();
+    const sessionId = cookieStore.get('spotify_session')?.value;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
     }
+
+    const session = getSession(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+
+    const accessToken = session.access_token;
 
     // Test the access token with a simple API call
     try {
@@ -23,10 +35,17 @@ export async function GET(request: NextRequest) {
       
       if (!testResponse.ok) {
         console.error('Access token test failed:', testResponse.status);
-        return NextResponse.json({ error: 'Invalid access token' }, { status: 401 });
+        
+        // If it's a 403, the token might be valid but the user doesn't have the required scopes
+        if (testResponse.status === 403) {
+          console.log('Access token is valid but user may not have required scopes');
+          // Continue with the request anyway, as some endpoints might work
+        } else {
+          return NextResponse.json({ error: 'Invalid access token' }, { status: 401 });
+        }
+      } else {
+        console.log('Access token is valid');
       }
-      
-      console.log('Access token is valid');
     } catch (error) {
       console.error('Error testing access token:', error);
       return NextResponse.json({ error: 'Error validating access token' }, { status: 500 });

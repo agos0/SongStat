@@ -16,7 +16,7 @@ interface Track {
   duration: string;
 }
 
-const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
+const ListeningHistory = () => {
   const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("short_term");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -57,51 +57,26 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
     const fetchTracks = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("spotify_access_token") || accessToken;
-
-        if (!token) {
-          setTracks(mockTracks);
-          return;
-        }
-
-        let endpoint;
-        if (timeRange === "short_term") {
-          endpoint = "https://api.spotify.com/v1/me/player/recently-played?limit=20";
-        } else {
-          endpoint = `https://api.spotify.com/v1/me/top/tracks?time_range=${timeRange}&limit=20`;
-        }
-
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
+        const params = new URLSearchParams({
+          timeRange: timeRange,
+          type: timeRange === "short_term" ? "recently-played" : "top-tracks",
         });
-        if (!res.ok) throw new Error("Failed to fetch tracks");
+
+        const res = await fetch(`/api/spotify/listening-history?${params.toString()}`, {
+          credentials: 'include', // Include cookies for session
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            // Session expired, redirect to login
+            window.location.href = '/';
+            return;
+          }
+          throw new Error("Failed to fetch tracks");
+        }
 
         const data = await res.json();
-        let tracksData: Track[] = [];
-
-        if (timeRange === "short_term") {
-          tracksData = data.items.map((item: any) => ({
-            id: item.track?.id ?? item.track?.uri ?? Math.random().toString(),
-            name: item.track.name,
-            artist: item.track.artists.map((a: any) => a.name).join(", "),
-            album: item.track.album.name,
-            albumArt: item.track.album.images[0]?.url || "",
-            playedAt: item.played_at,
-            duration: formatDuration(item.track.duration_ms),
-          }));
-        } else {
-          tracksData = data.items.map((track: any) => ({
-            id: track.id,
-            name: track.name,
-            artist: track.artists.map((a: any) => a.name).join(", "),
-            album: track.album.name,
-            albumArt: track.album.images[0]?.url || "",
-            playedAt: new Date().toISOString(),
-            duration: formatDuration(track.duration_ms),
-          }));
-        }
-
-        setTracks(tracksData);
+        setTracks(data.tracks);
       } catch (error) {
         console.error(error);
         setTracks(mockTracks);
@@ -111,7 +86,7 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
     };
 
     fetchTracks();
-  }, [timeRange, accessToken]);
+  }, [timeRange]);
 
   const timeRangeLabels = {
     short_term: "Last Week",
@@ -224,14 +199,12 @@ const ListeningHistory = ({ accessToken }: { accessToken?: string | null }) => {
         ))}
       </Tabs>
 
-      {!accessToken && (
-        <div className="mt-8 p-4 border border-dashed rounded-lg flex flex-col items-center justify-center">
-          <Music className="h-12 w-12 text-muted-foreground mb-2" />
-          <p className="text-center text-muted-foreground">
-            Connect your Spotify account to see your actual listening history
-          </p>
-        </div>
-      )}
+      <div className="mt-8 p-4 border border-dashed rounded-lg flex flex-col items-center justify-center">
+        <Music className="h-12 w-12 text-muted-foreground mb-2" />
+        <p className="text-center text-muted-foreground">
+          Connect your Spotify account to see your actual listening history
+        </p>
+      </div>
     </div>
   );
 };

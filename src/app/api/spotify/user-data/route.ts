@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getSession } from '../token/route';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const accessToken = searchParams.get('accessToken');
     const timeRange = searchParams.get('timeRange') || 'short_term';
 
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Access token is required' }, { status: 400 });
+    // Get session from cookies
+    const cookieStore = cookies();
+    const sessionId = cookieStore.get('spotify_session')?.value;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
     }
+
+    const session = getSession(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+
+    const accessToken = session.access_token;
 
     // Fetch user's top tracks
     const topTracksResponse = await fetch(

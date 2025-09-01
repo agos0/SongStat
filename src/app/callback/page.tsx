@@ -9,9 +9,15 @@ function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Prevent multiple processing attempts
+      if (isProcessing) {
+        return;
+      }
+
       const code = searchParams.get('code');
       const error = searchParams.get('error');
 
@@ -24,6 +30,8 @@ function CallbackContent() {
         setError('No authorization code received');
         return;
       }
+
+      setIsProcessing(true);
 
       try {
         // Exchange authorization code for tokens
@@ -44,10 +52,9 @@ function CallbackContent() {
 
         const data = await response.json();
         
-        // Store tokens in localStorage
-        localStorage.setItem('spotify_access_token', data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem('spotify_refresh_token', data.refresh_token);
+        // Store session ID in localStorage for client-side access
+        if (data.sessionId) {
+          localStorage.setItem('spotify_session_id', data.sessionId);
         }
 
         // Redirect back to the main page
@@ -55,11 +62,12 @@ function CallbackContent() {
       } catch (err) {
         console.error('Token exchange error:', err);
         setError(err instanceof Error ? err.message : 'Failed to complete authentication');
+        setIsProcessing(false);
       }
     };
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [searchParams, router, isProcessing]);
 
   if (error) {
     return (

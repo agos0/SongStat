@@ -32,10 +32,6 @@ interface Track {
   previewUrl: string | null;
 }
 
-interface RecommendationsProps {
-  accessToken?: string | null;
-}
-
 const genres = [
   "acoustic",
   "afrobeat",
@@ -59,9 +55,7 @@ const genres = [
   "soul",
 ];
 
-export default function Recommendations({
-  accessToken,
-}: RecommendationsProps) {
+export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -128,33 +122,15 @@ export default function Recommendations({
   ];
 
   useEffect(() => {
-    if (accessToken) {
-      fetchRecommendations();
-    } else {
-      // Fallback to mock data if no access token
-      setRecommendations(mockRecommendations);
-    }
-  }, [accessToken]);
+    fetchRecommendations();
+  }, []);
 
   const fetchRecommendations = async (genre?: string) => {
     setIsLoading(true);
 
     try {
-      if (!accessToken) {
-        // Fallback to mock data
-        const filteredRecommendations =
-          genre && genre !== "all"
-            ? mockRecommendations.slice(0, 4)
-            : mockRecommendations;
-
-        setRecommendations(filteredRecommendations);
-        setIsLoading(false);
-        return;
-      }
-
       // Fetch real recommendations from our API
       const params = new URLSearchParams({
-        accessToken: accessToken,
         limit: '20',
       });
 
@@ -162,9 +138,16 @@ export default function Recommendations({
         params.append('genre', genre);
       }
 
-      const response = await fetch(`/api/spotify/recommendations?${params.toString()}`);
+      const response = await fetch(`/api/spotify/recommendations?${params.toString()}`, {
+        credentials: 'include', // Include cookies for session
+      });
       
       if (!response.ok) {
+        if (response.status === 401) {
+          // Session expired, redirect to login
+          window.location.href = '/';
+          return;
+        }
         throw new Error('Failed to fetch recommendations');
       }
 

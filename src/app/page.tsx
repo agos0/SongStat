@@ -21,46 +21,83 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState("history");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Check if user is authenticated on component mount
   useEffect(() => {
     const checkAuthStatus = async () => {
-      const storedToken = localStorage.getItem("spotify_access_token");
-      if (storedToken) {
-        // Verify the token is still valid by making a test request
-        try {
-          const response = await fetch('https://api.spotify.com/v1/me', {
-            headers: {
-              'Authorization': `Bearer ${storedToken}`,
-            },
-          });
-          
-          if (response.ok) {
-            setIsAuthenticated(true);
-            setAccessToken(storedToken);
-          } else {
-            // Token is invalid, remove it
-            localStorage.removeItem("spotify_access_token");
-            localStorage.removeItem("spotify_refresh_token");
-          }
-        } catch (error) {
-          console.error('Error checking auth status:', error);
-          // Remove invalid tokens
-          localStorage.removeItem("spotify_access_token");
-          localStorage.removeItem("spotify_refresh_token");
+      // Prevent multiple auth checks
+      if (authChecked) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Check session status from server
+        const response = await fetch('/api/spotify/session', {
+          method: 'GET',
+          credentials: 'include', // Include cookies
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthenticated(true);
+          setAccessToken(data.access_token);
+          console.log('Authentication successful, access token received');
+        } else {
+          // Session is invalid, clear any stored data
+          localStorage.removeItem('spotify_session_id');
+          setIsAuthenticated(false);
+          setAccessToken(null);
+          console.log('Session validation failed, user not authenticated');
         }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        // Clear any stored data on error
+        localStorage.removeItem('spotify_session_id');
+        setIsAuthenticated(false);
+        setAccessToken(null);
+      } finally {
+        setIsLoading(false);
+        setAuthChecked(true);
       }
     };
 
     checkAuthStatus();
-  }, []);
+  }, [authChecked]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("spotify_access_token");
-    localStorage.removeItem("spotify_refresh_token");
-    setIsAuthenticated(false);
-    setAccessToken(null);
+  const handleLogout = async () => {
+    try {
+      // Delete session on server
+      await fetch('/api/spotify/session', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      // Clear client-side data
+      localStorage.removeItem('spotify_session_id');
+      setIsAuthenticated(false);
+      setAccessToken(null);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span>Loading...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -127,15 +164,15 @@ export default function Home() {
             </div>
 
             <TabsContent value="history" className="w-full">
-              <ListeningHistory accessToken={accessToken} />
+              <ListeningHistory />
             </TabsContent>
 
             <TabsContent value="recommendations" className="w-full">
-              <Recommendations accessToken={accessToken} />
+              <Recommendations />
             </TabsContent>
 
             <TabsContent value="stats" className="w-full">
-              <DataVisualization accessToken={accessToken} />
+              <DataVisualization />
             </TabsContent>
           </Tabs>
         )}
