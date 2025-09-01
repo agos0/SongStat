@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getSession } from '../token/route';
+import { getSession } from '@/lib/session-manager';
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-
-// In-memory session store (in production, use Redis or database)
-const sessions = new Map<string, any>();
+import { createSession } from '@/lib/session-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -80,15 +78,13 @@ export async function POST(request: NextRequest) {
     console.log('Created new session:', sessionId);
     
     // Store session data
-    sessions.set(sessionId, {
+    createSession(sessionId, {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expires_in: tokenData.expires_in,
       created_at: Date.now(),
       user_id: null // Will be set when we fetch user data
     });
-
-    console.log('Total active sessions:', sessions.size);
 
     // Create response with session cookie
     const response = NextResponse.json({
@@ -114,22 +110,4 @@ export async function POST(request: NextRequest) {
     console.error('Token exchange error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-// Helper function to get session data
-export function getSession(sessionId: string) {
-  return sessions.get(sessionId);
-}
-
-// Helper function to update session
-export function updateSession(sessionId: string, data: any) {
-  const session = sessions.get(sessionId);
-  if (session) {
-    sessions.set(sessionId, { ...session, ...data });
-  }
-}
-
-// Helper function to delete session
-export function deleteSession(sessionId: string) {
-  sessions.delete(sessionId);
 }

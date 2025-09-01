@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getSession } from '../token/route';
+import { getSession, getAllSessions } from '@/lib/session-manager';
 
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = cookies();
     const sessionId = cookieStore.get('spotify_session')?.value;
 
-    const debugInfo = {
+    const debugInfo: any = {
       hasSessionCookie: !!sessionId,
       sessionId: sessionId || 'none',
       timestamp: new Date().toISOString(),
