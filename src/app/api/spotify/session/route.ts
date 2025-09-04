@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    console.log('Valid session found:', sessionId);
+    console.log('Valid session found:', sessionId, 'User ID:', session.user_id);
 
     // Check if token is expired
     const now = Date.now();
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
           if (!clientId || !clientSecret) {
+            console.error('Spotify credentials not configured');
             return NextResponse.json({ error: 'Spotify credentials not configured' }, { status: 500 });
           }
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
           if (refreshResponse.ok) {
             const refreshData = await refreshResponse.json();
             
-            console.log('Token refreshed successfully');
+            console.log('Token refreshed successfully for session:', sessionId);
             
             // Update session with new token
             updateSession(sessionId, {
@@ -70,25 +71,26 @@ export async function GET(request: NextRequest) {
               expires_in: refreshData.expires_in,
             });
           } else {
-            console.log('Token refresh failed');
+            const errorData = await refreshResponse.json();
+            console.log('Token refresh failed for session:', sessionId, 'Error:', errorData);
             // Refresh failed, delete session
             deleteSession(sessionId);
             return NextResponse.json({ error: 'Token refresh failed' }, { status: 401 });
           }
         } catch (error) {
-          console.error('Token refresh error:', error);
+          console.error('Token refresh error for session:', sessionId, error);
           deleteSession(sessionId);
           return NextResponse.json({ error: 'Token refresh failed' }, { status: 401 });
         }
       } else {
-        console.log('No refresh token available');
+        console.log('No refresh token available for session:', sessionId);
         // No refresh token, delete session
         deleteSession(sessionId);
         return NextResponse.json({ error: 'Token expired and no refresh token' }, { status: 401 });
       }
     }
 
-    console.log('Token is still valid, returning access token');
+    console.log('Token is still valid for session:', sessionId, 'returning access token');
     // Token is still valid
     return NextResponse.json({
       access_token: session.access_token,

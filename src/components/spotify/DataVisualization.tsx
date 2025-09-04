@@ -4,12 +4,12 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  ChevronDown,
   BarChart3,
   PieChart,
-  Clock,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 
 interface GenreData {
@@ -25,11 +25,13 @@ interface TimeData {
 
 const DataVisualization = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("genres");
   const [genreData, setGenreData] = useState<GenreData[]>([]);
   const [timeData, setTimeData] = useState<TimeData[]>([]);
+  const [totalTracks, setTotalTracks] = useState(0);
 
-  // Mock colors for the genre chart
+  // Spotify-inspired colors for the charts
   const chartColors = [
     "#1DB954", // Spotify green
     "#1ED760",
@@ -46,11 +48,12 @@ const DataVisualization = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
 
       try {
         // Fetch real data from our API
         const response = await fetch('/api/spotify/user-data?timeRange=short_term', {
-          credentials: 'include', // Include cookies for session
+          credentials: 'include',
         });
         
         if (!response.ok) {
@@ -59,10 +62,16 @@ const DataVisualization = () => {
             window.location.href = '/';
             return;
           }
-          throw new Error('Failed to fetch user data');
+          throw new Error(`Failed to fetch user data: ${response.status}`);
         }
 
         const data = await response.json();
+
+        if (!data.genreData || data.genreData.length === 0) {
+          setError('No listening data available. Start listening to music to see your insights!');
+          setLoading(false);
+          return;
+        }
 
         // Process genre data with colors
         const processedGenreData: GenreData[] = data.genreData.map((genre: any, index: number) => ({
@@ -72,34 +81,12 @@ const DataVisualization = () => {
         }));
 
         setGenreData(processedGenreData);
-        setTimeData(data.timeData);
+        setTimeData(data.timeData || []);
+        setTotalTracks(data.totalTracks || 0);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching user data:', error);
-        // Fallback to mock data on error
-        const mockGenreData: GenreData[] = [
-          { name: "Pop", count: 145, color: chartColors[0] },
-          { name: "Rock", count: 98, color: chartColors[1] },
-          { name: "Hip Hop", count: 87, color: chartColors[2] },
-          { name: "Electronic", count: 76, color: chartColors[3] },
-          { name: "R&B", count: 65, color: chartColors[4] },
-          { name: "Indie", count: 54, color: chartColors[5] },
-          { name: "Jazz", count: 32, color: chartColors[6] },
-          { name: "Classical", count: 21, color: chartColors[7] },
-        ];
-
-        const mockTimeData: TimeData[] = [
-          { day: "Monday", count: 42 },
-          { day: "Tuesday", count: 38 },
-          { day: "Wednesday", count: 45 },
-          { day: "Thursday", count: 39 },
-          { day: "Friday", count: 68 },
-          { day: "Saturday", count: 82 },
-          { day: "Sunday", count: 74 },
-        ];
-
-        setGenreData(mockGenreData);
-        setTimeData(mockTimeData);
+        setError('Failed to load your listening data. Please try again later.');
         setLoading(false);
       }
     };
@@ -108,7 +95,19 @@ const DataVisualization = () => {
   }, []);
 
   // Calculate the maximum count for scaling the bar chart
-  const maxTimeCount = Math.max(...timeData.map((item) => item.count));
+  const maxTimeCount = timeData.length > 0 ? Math.max(...timeData.map((item) => item.count)) : 0;
+
+  if (error) {
+    return (
+      <div className="w-full p-4 bg-background">
+        <h1 className="text-3xl font-bold mb-6">Your Listening Insights</h1>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full p-4 bg-background">
@@ -126,7 +125,7 @@ const DataVisualization = () => {
           </TabsTrigger>
           <TabsTrigger value="patterns" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            Listening Patterns
+            Weekly Pattern
           </TabsTrigger>
         </TabsList>
 
@@ -145,13 +144,13 @@ const DataVisualization = () => {
                 </div>
               ) : (
                 <div className="flex flex-col md:flex-row gap-8">
-                  {/* Pie chart visualization (simplified) */}
+                  {/* Simplified pie chart visualization */}
                   <div className="relative w-full md:w-1/2 aspect-square max-w-[400px] mx-auto">
                     <div className="absolute inset-0 rounded-full border border-border flex items-center justify-center">
-                      <span className="text-lg font-medium">Total Tracks</span>
-                      <span className="block text-3xl font-bold">
-                        {genreData.reduce((sum, genre) => sum + genre.count, 0)}
-                      </span>
+                      <div className="text-center">
+                        <span className="block text-lg font-medium">Total Tracks</span>
+                        <span className="block text-3xl font-bold">{totalTracks}</span>
+                      </div>
                     </div>
                     {genreData.map((genre, index) => {
                       const totalCount = genreData.reduce(
@@ -243,7 +242,7 @@ const DataVisualization = () => {
                 <div className="space-y-4">
                   <Skeleton className="h-[300px] w-full rounded-lg" />
                 </div>
-              ) : (
+              ) : timeData.length > 0 ? (
                 <div className="pt-6">
                   {/* Bar chart visualization */}
                   <div className="h-[300px] flex items-end justify-between gap-2">
@@ -255,7 +254,7 @@ const DataVisualization = () => {
                         <div
                           className="w-full bg-primary rounded-t-md transition-all duration-500 ease-in-out"
                           style={{
-                            height: `${(item.count / maxTimeCount) * 250}px`,
+                            height: maxTimeCount > 0 ? `${(item.count / maxTimeCount) * 250}px` : '0px',
                             maxWidth: "50px",
                           }}
                         />
@@ -269,44 +268,9 @@ const DataVisualization = () => {
                     ))}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Listening Time Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-[100px] w-full rounded-lg" />
               ) : (
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
-                    <span className="text-muted-foreground text-sm">
-                      Morning
-                    </span>
-                    <span className="text-2xl font-bold">23%</span>
-                  </div>
-                  <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
-                    <span className="text-muted-foreground text-sm">
-                      Afternoon
-                    </span>
-                    <span className="text-2xl font-bold">18%</span>
-                  </div>
-                  <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
-                    <span className="text-muted-foreground text-sm">
-                      Evening
-                    </span>
-                    <span className="text-2xl font-bold">42%</span>
-                  </div>
-                  <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
-                    <span className="text-muted-foreground text-sm">Night</span>
-                    <span className="text-2xl font-bold">17%</span>
-                  </div>
+                <div className="text-center py-8 text-muted-foreground">
+                  No listening pattern data available
                 </div>
               )}
             </CardContent>

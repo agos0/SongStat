@@ -34,11 +34,15 @@ export default function Home() {
       }
 
       try {
+        console.log('Checking authentication status...');
+        
         // Check session status from server
         const response = await fetch('/api/spotify/session', {
           method: 'GET',
           credentials: 'include', // Include cookies
         });
+        
+        console.log('Session response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
@@ -66,6 +70,31 @@ export default function Home() {
 
     checkAuthStatus();
   }, [authChecked]);
+
+  // Add a more robust session check that runs less frequently
+  useEffect(() => {
+    if (!isAuthenticated || !authChecked) return;
+
+    // Set up periodic session validation (every 5 minutes)
+    const sessionCheckInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/spotify/session', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          // Session expired, log out
+          console.log('Session expired during periodic check');
+          handleLogout();
+        }
+      } catch (error) {
+        console.error('Periodic session check failed:', error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(sessionCheckInterval);
+  }, [isAuthenticated, authChecked]);
 
   const handleLogout = async () => {
     try {

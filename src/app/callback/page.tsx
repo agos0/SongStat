@@ -15,6 +15,7 @@ function CallbackContent() {
     const handleCallback = async () => {
       // Prevent multiple processing attempts
       if (isProcessing) {
+        console.log('Already processing, skipping duplicate request');
         return;
       }
 
@@ -31,6 +32,7 @@ function CallbackContent() {
         return;
       }
 
+      console.log('Starting token exchange for code:', code.substring(0, 10) + '...');
       setIsProcessing(true);
 
       try {
@@ -46,8 +48,15 @@ function CallbackContent() {
         if (!response.ok) {
           const errorData = await response.json();
           console.error('Token exchange failed:', errorData);
-          const errorMessage = errorData.details?.error_description || errorData.error || 'Failed to exchange code for tokens';
-          throw new Error(errorMessage);
+          
+          // Handle specific Spotify errors
+          if (errorData.error === 'invalid_grant') {
+            setError('Authorization code expired or already used. Please try logging in again.');
+          } else {
+            const errorMessage = errorData.details?.error_description || errorData.error || 'Failed to exchange code for tokens';
+            setError(errorMessage);
+          }
+          return;
         }
 
         const data = await response.json();
@@ -55,19 +64,40 @@ function CallbackContent() {
         // Store session ID in localStorage for client-side access
         if (data.sessionId) {
           localStorage.setItem('spotify_session_id', data.sessionId);
+          
+          // Verify session was created successfully
+          console.log('Session created, verifying...');
+          
+          // Small delay to ensure session is properly stored
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Verify session is working
+          const sessionCheck = await fetch('/api/spotify/session', {
+            credentials: 'include',
+          });
+          
+          if (sessionCheck.ok) {
+            console.log('Session verified successfully');
+            // Redirect back to the main page
+            router.push('/');
+          } else {
+            console.error('Session verification failed');
+            setError('Session verification failed. Please try again.');
+          }
+        } else {
+          setError('No session ID received');
         }
-
-        // Redirect back to the main page
-        router.push('/');
       } catch (err) {
         console.error('Token exchange error:', err);
         setError(err instanceof Error ? err.message : 'Failed to complete authentication');
+      } finally {
         setIsProcessing(false);
       }
     };
 
+    // Only run once when component mounts
     handleCallback();
-  }, [searchParams, router, isProcessing]);
+  }, []); // Remove dependencies to prevent multiple executions
 
   if (error) {
     return (

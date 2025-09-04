@@ -63,6 +63,17 @@ export async function POST(request: NextRequest) {
       console.error('Response status:', tokenResponse.status);
       console.error('Response headers:', Object.fromEntries(tokenResponse.headers.entries()));
       
+      // Handle specific Spotify errors
+      if (errorData.error === 'invalid_grant') {
+        console.error('INVALID_GRANT: Authorization code expired or already used');
+        return NextResponse.json({ 
+          error: 'invalid_grant',
+          error_description: 'Authorization code expired or already used. Please log in again.',
+          details: errorData,
+          status: tokenResponse.status
+        }, { status: 400 });
+      }
+      
       return NextResponse.json({ 
         error: 'Failed to exchange authorization code',
         details: errorData,
@@ -101,6 +112,7 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
     });
 
     console.log('Session cookie set for session:', sessionId);
